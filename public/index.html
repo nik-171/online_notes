@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Тест API</title>
+</head>
+<body>
+  <h1>Тест API</h1>
+
+  <h2>Регистрация</h2>
+  <form id="registerForm">
+    <input type="text" id="regUsername" placeholder="Username" required /><br/>
+    <input type="email" id="regEmail" placeholder="Email" required /><br/>
+    <input type="password" id="regPassword" placeholder="Password (min 6)" required /><br/>
+    <button type="submit">Зарегистрироваться</button>
+  </form>
+  <div id="regMessage"></div>
+
+  <h2>Логин</h2>
+  <form id="loginForm">
+    <input type="email" id="loginEmail" placeholder="Email" required /><br/>
+    <input type="password" id="loginPassword" placeholder="Password" required /><br/>
+    <button type="submit">Войти</button>
+  </form>
+  <div id="loginMessage"></div>
+
+  <h2>Заметки</h2>
+  <button id="loadNotesBtn">Загрузить заметки</button>
+  <ul id="notesList"></ul>
+
+  <h3>Создать заметку</h3>
+  <form id="createNoteForm">
+    <input type="text" id="noteTitle" placeholder="Заголовок" required /><br/>
+    <textarea id="noteContent" placeholder="Содержание" required></textarea><br/>
+    <button type="submit">Создать</button>
+  </form>
+  <div id="noteMessage"></div>
+
+  <h3>Обновить заметку</h3>
+  <form id="updateNoteForm">
+    <input type="text" id="updateNoteId" placeholder="ID заметки" required /><br/>
+    <input type="text" id="updateNoteTitle" placeholder="Новый заголовок" required /><br/>
+    <textarea id="updateNoteContent" placeholder="Новое содержание" required></textarea><br/>
+    <button type="submit">Обновить</button>
+  </form>
+
+  <h3>Удалить заметку</h3>
+  <form id="deleteNoteForm">
+    <input type="text" id="deleteNoteId" placeholder="ID заметки" required /><br/>
+    <button type="submit">Удалить</button>
+  </form>
+
+  <script>
+    let token = null;
+
+    // --- Регистрация ---
+    document.getElementById('registerForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      const username = document.getElementById('regUsername').value.trim();
+      const email = document.getElementById('regEmail').value.trim();
+      const password = document.getElementById('regPassword').value.trim();
+
+      const res = await fetch('/api/users/register', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({username, email, password})
+      });
+      const data = await res.json();
+
+      const msg = document.getElementById('regMessage');
+      if(res.ok) {
+        msg.style.color = 'green';
+        msg.textContent = 'Регистрация успешна!';
+      } else {
+        msg.style.color = 'red';
+        msg.textContent = data.message || 'Ошибка регистрации';
+      }
+    });
+
+    // --- Логин ---
+    document.getElementById('loginForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      const email = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPassword').value.trim();
+
+      const res = await fetch('/api/users/login', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({email, password})
+      });
+      const data = await res.json();
+
+      const msg = document.getElementById('loginMessage');
+      if(res.ok) {
+        msg.style.color = 'green';
+        msg.textContent = 'Вход успешен!';
+        token = data.token;
+      } else {
+        msg.style.color = 'red';
+        msg.textContent = data.message || 'Ошибка входа';
+      }
+    });
+
+    // --- Заметки ---
+
+    // Загрузить заметки
+    document.getElementById('loadNotesBtn').addEventListener('click', async () => {
+      if (!token) {
+        alert('Сначала войдите в систему');
+        return;
+      }
+      const res = await fetch('/api/notes', {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      const notes = await res.json();
+      const ul = document.getElementById('notesList');
+      ul.innerHTML = '';
+      notes.forEach(note => {
+        const li = document.createElement('li');
+        li.textContent = `${note._id}: ${note.title} - ${note.content}`;
+        ul.appendChild(li);
+      });
+    });
+
+    // Создать заметку
+    document.getElementById('createNoteForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      if (!token) {
+        alert('Сначала войдите в систему');
+        return;
+      }
+      const title = document.getElementById('noteTitle').value.trim();
+      const content = document.getElementById('noteContent').value.trim();
+
+      const res = await fetch('/api/notes', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token
+        },
+        body: JSON.stringify({title, content})
+      });
+
+      const data = await res.json();
+      const msg = document.getElementById('noteMessage');
+      if(res.ok) {
+        msg.style.color = 'green';
+        msg.textContent = 'Заметка создана!';
+      } else {
+        msg.style.color = 'red';
+        msg.textContent = data.message || 'Ошибка создания заметки';
+      }
+    });
+
+    // Обновить заметку
+    document.getElementById('updateNoteForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      if (!token) {
+        alert('Сначала войдите в систему');
+        return;
+      }
+      const id = document.getElementById('updateNoteId').value.trim();
+      const title = document.getElementById('updateNoteTitle').value.trim();
+      const content = document.getElementById('updateNoteContent').value.trim();
+
+      const res = await fetch(`/api/notes/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token
+        },
+        body: JSON.stringify({title, content})
+      });
+
+      if(res.ok) {
+        alert('Заметка обновлена');
+      } else {
+        alert('Ошибка обновления');
+      }
+    });
+
+    // Удалить заметку
+    document.getElementById('deleteNoteForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      if (!token) {
+        alert('Сначала войдите в систему');
+        return;
+      }
+      const id = document.getElementById('deleteNoteId').value.trim();
+
+      const res = await fetch(`/api/notes/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+
+      if(res.ok) {
+        alert('Заметка удалена');
+      } else {
+        alert('Ошибка удаления');
+      }
+    });
+  </script>
+</body>
+</html>
