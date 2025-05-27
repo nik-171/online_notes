@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <form id="editNoteForm">
+        <input type="text" id="title" placeholder="Заголовок" required><br>
+        <textarea id="content" placeholder="Содержание" required></textarea><br>
+        <button type="submit">Сохранить</button>
+      </form>
+      <button type="button" id="delete">Удалить заметку</button>
+      <p id="status"></p>
+    <script>
+        const token = localStorage.getItem('token');
+        const noteId = localStorage.getItem('noteId');
+        
+        if (!token || !noteId) {
+            alert('Нет токена или ID заметки');
+            location.href = '/';
+        }
+        
+        // Загрузка текущих данных
+        fetch(`/api/notes/${noteId}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        })
+        .then(res => res.json())
+        .then(note => {
+            document.getElementById('title').value = note.title;
+            document.getElementById('content').value = note.content;
+        });
+
+         // Отправка изменений
+        document.getElementById('editNoteForm').addEventListener('submit', async e => {
+            e.preventDefault();
+            
+            const updatedNote = {
+                title: document.getElementById('title').value,
+                content: document.getElementById('content').value
+            };
+        
+            const res = await fetch(`/api/notes/${noteId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(updatedNote)
+            });
+        
+            if (res.ok) {
+                document.getElementById('status').textContent = 'Заметка обновлена!';
+            } else {
+                document.getElementById('status').textContent = 'Ошибка при обновлении';
+            }
+        });
+
+        document.getElementById('delete').addEventListener('click', async e => {
+            e.preventDefault();
+            if (!token) {
+              alert('Сначала войдите в систему');
+              return;
+            }
+
+            const result = prompt('введите ok для подтверждения').toLowerCase();
+            if (result == 'ok' || result == 'ок') {
+                const res = await fetch(`/api/notes/${noteId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                if(res.ok) {
+                    alert('Заметка удалена');
+                } else {
+                    alert('Ошибка удаления');
+                }
+            }      
+          });
+    </script>
+</body>
+</html>
