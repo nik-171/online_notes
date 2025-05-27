@@ -36,6 +36,13 @@
   </form>
   <div id="noteMessage"></div>
 
+  <h3>open</h3>
+  <form id="loadOneNote">
+    <input type="text" id="noteId" placeholder="id" required>
+    <button type="submit" id="loadOneNote">open (localstorage)</button>
+    <ul id="oneNote"></ul>
+  </form>
+
   <h3>Обновить заметку</h3>
   <form id="updateNoteForm">
     <input type="text" id="updateNoteId" placeholder="ID заметки" required /><br/>
@@ -95,6 +102,7 @@
         msg.style.color = 'green';
         msg.textContent = 'Вход успешен!';
         token = data.token;
+        localStorage.setItem('token', token)
       } else {
         msg.style.color = 'red';
         msg.textContent = data.message || 'Ошибка входа';
@@ -110,7 +118,10 @@
         return;
       }
       const res = await fetch('/api/notes', {
-        headers: { 'Authorization': 'Bearer ' + token }
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token 
+        }
       });
       const notes = await res.json();
       const ul = document.getElementById('notesList');
@@ -121,6 +132,20 @@
         ul.appendChild(li);
       });
     });
+
+    //открыть одну заметку
+    document.getElementById('loadOneNote').addEventListener('submit', async e => {
+      e.preventDefault();
+      if (!token) {
+        alert('Сначала войдите в систему');
+        return;
+      }
+      const id = document.getElementById('noteId').value.trim()
+
+      localStorage.setItem('noteId', id)
+
+      window.location.href = '/api/notes/note';
+    })
 
     // Создать заметку
     document.getElementById('createNoteForm').addEventListener('submit', async e => {
